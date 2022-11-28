@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket Test</title>
+</head>
+<body>
+  <script>
+    var ws = new WebSocket('ws://localhost:8080/ws');
+    ws.onopen = function () {
+      console.log('socket connection opened properly');
+      // ws.send("Hello World"); // send a message
+      // console.log('message sent');
+    };
+
+    ws.onmessage = function (evt) {
+      console.log("Message received = " + evt.data);
+    };
+
+    ws.onclose = function () {
+      // websocket is closed.
+      console.log("Connection closed...");
+    };
+
+    function sendMessage() {
+        text = document.getElementById("w3review")
+
+        ws.send("test: " + text.value)
+    }
+  </script>
+
+  <textarea id="w3review" name="w3review" rows="4" cols="50"></textarea>
+  <br>
+  <input type="submit" value="отправить" onclick="sendMessage()">
+</body>
+</html>
