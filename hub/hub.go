@@ -12,3 +12,24 @@ type Hub struct {
 	rooms      map[string]*room.Room
 	clients    map[string]*client.Client
 }
+
+func NewHub() *Hub {
+	return &Hub{
+		broadcast:  make(chan *client.Message),
+		register:   make(chan *client.Client),
+		unregister: make(chan *client.Client),
+		rooms:      make(map[string]*room.Room),
+		clients:    make(map[string]*client.Client),
+	}
+}
+
+func (h *Hub) Run() {
+	go func() {
+		for {
+			select {
+			case m := <-h.broadcast:
+				h.rooms[m.RoomId].AddMessage(m)
+			}
+		}
+	}()
+}

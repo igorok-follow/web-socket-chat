@@ -1,42 +1,39 @@
 package main
 
 import (
+	"chat/client"
+	"chat/hub"
 	"encoding/json"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	gw "github.com/gorilla/websocket"
 	"io/ioutil"
 	"log"
 	"net/http"
 )
 
-var upgrader = gw.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
+const (
+	MESSAGE_TO = 1
+)
+
+type WSRequest struct {
+	Type int `json:"type"`
 }
 
 type RegisterClientRequest struct {
 	Login string
 }
 
-type RegisterClientResponse struct {
-	Id      string
-	Success bool
-}
-
 func main() {
+	h := hub.NewHub()
+	h.Run()
+
 	router := mux.NewRouter()
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./index.html")
 	})
 	router.Handle("/get/people", GetPeople()).Methods("POST")
-	router.Handle("/register", nil).Methods("POST")
-	router.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		serveClient(w, r)
-	})
+	router.Handle("/register", Register()).Methods("POST")
+	router.Handle("/ws", Ws(h))
 
 	headers := handlers.AllowedHeaders([]string{"X-Requested-With", "Origin", "Authorization", "Content-Type"})
 	methods := handlers.AllowedMethods([]string{"GET", "POST"})
@@ -46,27 +43,54 @@ func main() {
 	http.ListenAndServe(":8080", handlers.CORS(headers, methods, origins)(router))
 }
 
-func serveClient(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	// to rooms hub, contains uid, recipient_id, returning room id
-}
-
-func GetPeople() http.Handler {
-	var client *RegisterClientRequest
+func Ws(h *hub.Hub) http.Handler {
+	var ws *WSRequest
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			log.Println(err)
 		}
-		err = json.Unmarshal(body, &client)
+		err = json.Unmarshal(body, &ws)
 		if err != nil {
 			log.Println(err)
 		}
+
+		switch ws.Type {
+		case 0:
+			return
+		case 1:
+			client.ServeWs(w, r, h)
+		}
+	})
+}
+
+func Register() http.Handler {
+	var register *RegisterClientRequest
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Println(err)
+		}
+		err = json.Unmarshal(body, &register)
+		if err != nil {
+			log.Println(err)
+		}
+
+		// func which can show all active clients
+	})
+}
+
+func GetPeople() http.Handler {
+	//var client *RegisterClientRequest
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		//body, err := ioutil.ReadAll(r.Body)
+		//if err != nil {
+		//	log.Println(err)
+		//}
+		//err = json.Unmarshal(body, &client)
+		//if err != nil {
+		//	log.Println(err)
+		//}
 
 		// func which can show all active clients
 	})
